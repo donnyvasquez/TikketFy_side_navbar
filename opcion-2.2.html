@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Propuesta 2.2 - Menú con Submenús Específicos</title>
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    /* Layout principal ocupa el 100% del viewport */
+    .wrapper {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
+    /* Sidebar de altura completa con header y footer fijos */
+    #sidebar {
+      width: 280px;
+      background: #343a40;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    #sidebar .sidebar-header,
+    #sidebar .sidebar-footer {
+      padding: 15px;
+      background: #23272b;
+    }
+    #sidebar .sidebar-body {
+      flex: 1;
+      overflow-y: auto;
+    }
+    #sidebar .nav-link {
+      color: #adb5bd;
+    }
+    #sidebar .nav-link.active {
+      background-color: #495057;
+      color: #fff;
+    }
+    /* Header del layout principal */
+    #header {
+      background: #f8f9fa;
+      padding: 10px 20px;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    /* Contenido principal con scroll interno */
+    #content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .menu-section-title {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      padding: 10px 15px;
+      color: #ced4da;
+    }
+    /* Submenú indentado */
+    .submenu .nav-link {
+      padding-left: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <!-- Sidebar Header fijo -->
+      <div class="sidebar-header text-center">
+        <h4>TikketFy</h4>
+      </div>
+      <!-- Cuerpo del sidebar con scroll -->
+      <div class="sidebar-body">
+        <!-- Sección Operaciones -->
+        <div class="menu-section-title">Operaciones</div>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a href="#" class="nav-link active">Tickets</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Devices</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Terminal Profiles</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Partners</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Users</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Transactions</a>
+          </li>
+        </ul>
+
+        <!-- Sección Configuraciones -->
+        <div class="menu-section-title mt-3">Configuraciones</div>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a href="#" class="nav-link">Company Info</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Branding</a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">Static Content<br><small>(Header, Footer, Disclaimer)</small></a>
+          </li>
+          <!-- Tickets Settings con submenús -->
+          <li class="nav-item">
+            <a href="#" class="nav-link">Tickets Settings</a>
+            <ul class="nav flex-column submenu">
+              <li class="nav-item"><a href="#" class="nav-link">Price Types</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">Categories</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">Stop List</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">Ticket Printing</a></li>
+            </ul>
+          </li>
+          <!-- Terminal Profiles Settings con submenús -->
+          <li class="nav-item">
+            <a href="#" class="nav-link">Terminal Profiles Settings</a>
+            <ul class="nav flex-column submenu">
+              <li class="nav-item"><a href="#" class="nav-link">Ticket Layout</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">Category Layout</a></li>
+            </ul>
+          </li>
+          <!-- Partners Settings con submenús -->
+          <li class="nav-item">
+            <a href="#" class="nav-link">Partners Settings</a>
+            <ul class="nav flex-column submenu">
+              <li class="nav-item"><a href="#" class="nav-link">Suppliers</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">3rd Party Reseller</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">API</a></li>
+            </ul>
+          </li>
+          <!-- Users Settings con submenús -->
+          <li class="nav-item">
+            <a href="#" class="nav-link">Users Settings</a>
+            <ul class="nav flex-column submenu">
+              <li class="nav-item"><a href="#" class="nav-link">Roles</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">Employees</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">Invited Users</a></li>
+            </ul>
+          </li>
+          <!-- TikketFy Store con submenús -->
+          <li class="nav-item">
+            <a href="#" class="nav-link">TikketFy Store</a>
+            <ul class="nav flex-column submenu">
+              <li class="nav-item"><a href="#" class="nav-link">Partners</a></li>
+              <li class="nav-item"><a href="#" class="nav-link">Add-on</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <!-- Sidebar Footer fijo -->
+      <div class="sidebar-footer">
+        <select class="form-select">
+          <option selected>Empresa 1</option>
+          <option>Empresa 2</option>
+        </select>
+      </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div id="content" class="d-flex flex-column">
+      <!-- Header principal -->
+      <header id="header">
+        <span class="badge bg-primary">Módulo Actual</span>
+        <div class="d-flex align-items-center">
+          <img src="https://via.placeholder.com/40" alt="User" class="rounded-circle me-2">
+          <span>Nombre Usuario</span>
+        </div>
+      </header>
+      <!-- Área de contenido con scroll -->
+      <main class="p-3 flex-fill">
+        <div class="container-fluid">
+          <p class="text-muted">Espacio reservado para listados o formularios según la opción seleccionada.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+  <!-- Bootstrap 5.3 JS Bundle (incluye Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
