@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Category Layout - Reorder Categories</title>
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body {
+      font-size: 14px;
+      margin: 0;
+    }
+    /* Lista de categorías */
+    #categoryList .list-group-item {
+      user-select: none;
+      cursor: move;
+      position: relative; /* Para posicionar el badge */
+    }
+    .sortable-ghost {
+      opacity: 0.5;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      cursor: grabbing;
+    }
+    /* Preview interno con ancho máximo y scroll */
+    #previewPanel {
+      max-width: 320px;
+      height: 100%;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Izquierda: Lista de Categorías y Controles -->
+      <div class="col-md-6">
+        <h6>Categories</h6>
+        <div class="mb-2">
+          <label for="orderTypeSelect" class="form-label">Order by:</label>
+          <select id="orderTypeSelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
+            <option value="alphabetical" selected>Alphabetical</option>
+            <option value="creation">Creation Date</option>
+          </select>
+          <select id="orderDirectionSelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
+            <option value="asc" selected>Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+          <button id="resetBtn" class="btn btn-sm btn-secondary d-none">Reset</button>
+        </div>
+        <ul id="categoryList" class="list-group">
+          <!-- Los items se generarán mediante JavaScript -->
+        </ul>
+      </div>
+      <!-- Derecha: Preview del Device -->
+      <div class="col-md-6">
+        <h6>Device Preview</h6>
+        <div id="previewPanel" class="border p-2">
+          <!-- La vista previa se actualizará dinámicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Bootstrap JS Bundle y SortableJS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <script>
+    // Array por defecto de 10 categorías (en inglés)
+    const defaultCategories = [
+      { id: 1, name: "Food", created: "2022-01-05", tickets: 15 },
+      { id: 2, name: "Beverages", created: "2022-02-10", tickets: 10 },
+      { id: 3, name: "Snacks", created: "2022-03-12", tickets: 8 },
+      { id: 4, name: "Recreation", created: "2022-04-18", tickets: 12 },
+      { id: 5, name: "Tours", created: "2022-05-20", tickets: 5 }/*,
+      { id: 6, name: "Vehicles", created: "2022-06-01", tickets: 7 },
+      { id: 7, name: "Transport", created: "2022-06-15", tickets: 9 },
+      { id: 8, name: "Entertainment", created: "2022-07-10", tickets: 11 },
+      { id: 9, name: "Adventures", created: "2022-08-05", tickets: 6 },
+      { id: 10, name: "Leisure", created: "2022-09-12", tickets: 4 }*/
+    ];
+
+    // Función para renderizar la lista de categorías
+    function renderCategoryList(categories) {
+      const list = document.getElementById('categoryList');
+      list.innerHTML = '';
+      categories.forEach(cat => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.setAttribute('data-id', cat.id);
+        li.style.position = 'relative';
+        li.innerHTML = `
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>${cat.name}</strong><br>
+              <small>Created: ${new Date(cat.created).toLocaleDateString()}</small>
+            </div>
+            <span class="badge bg-primary rounded-pill">${cat.tickets} Tickets</span>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    // Función para renderizar el preview
+    function renderPreview(categories) {
+      const preview = document.getElementById('previewPanel');
+      preview.innerHTML = '';
+      categories.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'p-2 mb-2 border rounded';
+        div.innerHTML = `<strong>${cat.name}</strong> <span class="badge bg-secondary">${cat.tickets}</span>`;
+        preview.appendChild(div);
+      });
+    }
+
+    // Funciones para guardar y obtener el orden en localStorage
+    function getSavedCategories() {
+      const saved = localStorage.getItem('categoryOrder');
+      return saved ? JSON.parse(saved) : defaultCategories;
+    }
+
+    function saveCategories(categories) {
+      localStorage.setItem('categoryOrder', JSON.stringify(categories));
+    }
+
+    let categories = getSavedCategories();
+
+    // Función para inicializar la modal
+    function initModal() {
+      categories = getSavedCategories();
+      renderCategoryList(categories);
+      renderPreview(categories);
+      document.getElementById('orderTypeSelect').value = 'alphabetical';
+      document.getElementById('orderDirectionSelect').value = 'asc';
+      document.getElementById('resetBtn').classList.add('d-none');
+    }
+
+    // Inicializamos SortableJS en la lista de categorías
+    const sortable = new Sortable(document.getElementById('categoryList'), {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function (evt) {
+        // Actualiza el arreglo categorías según el nuevo orden en el DOM
+        const newOrder = [];
+        document.querySelectorAll('#categoryList li').forEach(li => {
+          const id = parseInt(li.getAttribute('data-id'));
+          const category = categories.find(cat => cat.id === id);
+          newOrder.push(category);
+        });
+        categories = newOrder;
+        // Elimina badges existentes y agrega badge al ítem movido
+        document.querySelectorAll('#categoryList .moved-badge').forEach(el => el.remove());
+        evt.item.insertAdjacentHTML('beforeend', `
+          <span class="moved-badge position-absolute top-0 end-0 translate-middle badge bg-warning rounded-pill">
+            <span>Moved</span>
+          </span>
+        `);
+        // Muestra el botón Reset
+        document.getElementById('resetBtn').classList.remove('d-none');
+        renderPreview(categories);
+        // Guarda automáticamente los cambios en localStorage
+        saveCategories(categories);
+      }
+    });
+
+    // Función para ordenar según los selectores
+    function sortCategories() {
+      const orderType = document.getElementById('orderTypeSelect').value;
+      const orderDir = document.getElementById('orderDirectionSelect').value;
+      let sorted = [...categories];
+      if (orderType === 'alphabetical') {
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (orderType === 'creation') {
+        sorted.sort((a, b) => new Date(a.created) - new Date(b.created));
+      }
+      if (orderDir === 'desc') {
+        sorted.reverse();
+      }
+      categories = sorted;
+      renderCategoryList(categories);
+      renderPreview(categories);
+      // Guarda automáticamente los cambios
+      saveCategories(categories);
+    }
+
+    document.getElementById('orderTypeSelect').addEventListener('change', sortCategories);
+    document.getElementById('orderDirectionSelect').addEventListener('change', sortCategories);
+
+    // Botón Reset: vuelve al orden alfabético ascendente y guarda automáticamente
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      categories = [...defaultCategories].sort((a, b) => a.name.localeCompare(b.name));
+      renderCategoryList(categories);
+      renderPreview(categories);
+      document.getElementById('orderTypeSelect').value = 'alphabetical';
+      document.getElementById('orderDirectionSelect').value = 'asc';
+      document.getElementById('resetBtn').classList.add('d-none');
+      saveCategories(categories);
+    });
+
+    // Inicializa la modal al cargar el contenido del iframe
+    document.addEventListener('DOMContentLoaded', initModal);
+  </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Versión 2.3 Mejorada - Menú Settings Ordenados (Nuevo Orden)</title>
+  <title>Versión 2.3 Mejorada - Insights y Modal Category Layout</title>
   <!-- Bootstrap 5.3 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Bootstrap Icons CDN -->
@@ -11,14 +11,15 @@
     html, body {
       height: 100%;
       margin: 0;
+      font-size: 14px;
     }
-    /* Layout principal ocupa el 100% del viewport */
+    /* Layout principal */
     .wrapper {
       display: flex;
       height: 100vh;
       width: 100%;
     }
-    /* Sidebar de altura completa con header y footer fijos */
+    /* Sidebar (estilos existentes) */
     #sidebar {
       width: 280px;
       background: #343a40;
@@ -34,8 +35,13 @@
     #sidebar .sidebar-body {
       flex: 1;
       overflow-y: auto;
+      padding: 0.5rem;
+      transition: all 0.3s ease;
     }
-    /* Scroll personalizado: track transparente y thumb blanca al 25% de opacidad con borde */
+    #sidebar .sidebar-body > * {
+      transition: all 0.3s ease;
+    }
+    /* Scroll personalizado */
     #sidebar .sidebar-body::-webkit-scrollbar {
       width: 14px;
     }
@@ -48,7 +54,7 @@
       border: 4px solid transparent;
       background-clip: padding-box;
     }
-    /* Header del layout principal */
+    /* Header del layout */
     #header {
       background: #f8f9fa;
       padding: 10px 20px;
@@ -57,12 +63,13 @@
       justify-content: space-between;
       align-items: center;
     }
-    /* Contenido principal con scroll interno */
+    /* Contenido */
     #content {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow-y: auto;
+      padding: 0.5rem;
     }
     .menu-section-title {
       font-size: 0.9rem;
@@ -70,29 +77,28 @@
       padding: 10px 15px;
       color: #ced4da;
     }
-    /* Estilos para enlaces del sidebar */
+    /* Enlaces del sidebar */
     #sidebar .nav-link {
       color: #adb5bd;
       cursor: pointer;
+      border-radius: 0.25rem;
     }
     #sidebar .nav-link.active,
     #sidebar .nav-link:hover {
       background-color: #495057;
       color: #fff;
     }
-    /* Chevron para menús desplegables */
+    /* Chevron para collapses */
     .nav-link.d-flex i {
       transition: transform 0.3s;
     }
-    /* Cuando el collapse está cerrado (clase collapsed) */
     .nav-link.collapsed i {
       transform: rotate(0deg);
     }
-    /* Cuando el collapse está abierto */
     .nav-link:not(.collapsed) i {
       transform: rotate(180deg);
     }
-    /* Footer de sidebar: iconos con flex y space-between */
+    /* Footer del sidebar */
     .sidebar-footer-icons {
       display: flex;
       justify-content: space-between;
@@ -107,16 +113,13 @@
 </head>
 <body>
   <div class="wrapper">
-    <!-- Sidebar -->
+    <!-- Sidebar (igual que antes) -->
     <nav id="sidebar">
-      <!-- Sidebar Header fijo -->
       <div class="sidebar-header text-center">
         <h4>TikketFy</h4>
       </div>
-      <!-- Cuerpo del sidebar con scroll -->
       <div class="sidebar-body">
-        <!-- Sección Operaciones -->
-        <div class="menu-section-title">Operaciones</div>
+        <div class="menu-section-title d-none">Operaciones</div>
         <ul class="nav flex-column">
           <li class="nav-item">
             <a href="#" class="nav-link active">Tickets</a>
@@ -133,14 +136,24 @@
           <li class="nav-item">
             <a href="#" class="nav-link">Users</a>
           </li>
+          <!-- Menú Insights -->
           <li class="nav-item">
-            <a href="#" class="nav-link">Transactions</a>
+            <a class="nav-link d-flex justify-content-between align-items-center collapsed" data-bs-toggle="collapse" href="#collapseInsights" role="button" aria-expanded="false" aria-controls="collapseInsights">
+              Insights
+              <i class="bi bi-chevron-down"></i>
+            </a>
+            <div class="collapse" id="collapseInsights">
+              <ul class="nav flex-column ms-3">
+                <li class="nav-item"><a href="#" class="nav-link">Transactions</a></li>
+                <li class="nav-item"><a href="#" class="nav-link">Reports</a></li>
+                <li class="nav-item"><a href="#" class="nav-link">Ticket Tracking</a></li>
+              </ul>
+            </div>
           </li>
         </ul>
-        <!-- Sección Configuraciones -->
-        <div class="menu-section-title mt-3">Configuraciones</div>
+        <hr>
+        <div class="menu-section-title">Settings</div>
         <ul class="nav flex-column">
-          <!-- Orden de prioridad basado en operaciones -->
           <li class="nav-item">
             <a class="nav-link d-flex justify-content-between align-items-center collapsed" data-bs-toggle="collapse" href="#collapseTicketsSettings" role="button" aria-expanded="false" aria-controls="collapseTicketsSettings">
               Tickets Settings
@@ -154,7 +167,6 @@
               </ul>
             </div>
           </li>
-          <!-- Static Content relacionado con tickets y recibos -->
           <li class="nav-item">
             <a href="#" class="nav-link">Static Content<br><small>(Header, Footer, Disclaimer)</small></a>
           </li>
@@ -166,7 +178,10 @@
             <div class="collapse" id="collapseTerminalProfiles">
               <ul class="nav flex-column ms-3">
                 <li class="nav-item"><a href="#" class="nav-link">Ticket Layout</a></li>
-                <li class="nav-item"><a href="#" class="nav-link">Category Layout</a></li>
+                <!-- Enlace para abrir la modal del Category Layout -->
+                <li class="nav-item">
+                  <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#modalContainer" data-url="modal_category.html" data-title="Reorder Ticket Categories">Category Layout</a>
+                </li>
               </ul>
             </div>
           </li>
@@ -198,7 +213,6 @@
               </ul>
             </div>
           </li>
-          <!-- Ajustes globales, que pueden ir al final -->
           <li class="nav-item">
             <a href="#" class="nav-link">Company Info</a>
           </li>
@@ -207,7 +221,6 @@
           </li>
         </ul>
       </div>
-      <!-- Sidebar Footer fijo -->
       <div class="sidebar-footer">
         <select class="form-select">
           <option selected>Empresa 1</option>
@@ -220,9 +233,7 @@
       </div>
     </nav>
     
-    <!-- Main Content -->
     <div id="content" class="d-flex flex-column">
-      <!-- Header principal -->
       <header id="header">
         <span class="badge bg-primary">Módulo Actual</span>
         <div class="d-flex align-items-center">
@@ -230,7 +241,6 @@
           <span>Nombre Usuario</span>
         </div>
       </header>
-      <!-- Área de contenido con scroll -->
       <main class="p-3 flex-fill">
         <div class="container-fluid">
           <p class="text-muted">Espacio reservado para listados o formularios según la opción seleccionada.</p>
@@ -238,7 +248,41 @@
       </main>
     </div>
   </div>
-  <!-- Bootstrap 5.3 JS Bundle (incluye Popper) -->
+  
+  <!-- Modal Contenedor usando un iframe para contenido independiente -->
+  <div class="modal fade" id="modalContainer" tabindex="-1" aria-labelledby="modalContainerLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content" style="height: 90vh;">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalContainerLabel">Modal Title</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <iframe id="modalIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Bootstrap JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Al abrir la modal, asigna el src del iframe según data-url del enlace disparador
+    const modalContainer = document.getElementById('modalContainer');
+    modalContainer.addEventListener('show.bs.modal', function (event) {
+      const triggerEl = event.relatedTarget;
+      const url = triggerEl.getAttribute('data-url');
+      const title = triggerEl.getAttribute('data-title') || 'Modal Title';
+      document.getElementById('modalContainerLabel').textContent = title;
+      document.getElementById('modalIframe').src = url;
+    });
+    // Al cerrar la modal, limpia el src para liberar recursos
+    modalContainer.addEventListener('hidden.bs.modal', function () {
+      document.getElementById('modalIframe').src = "";
+    });
+  </script>
 </body>
 </html>
