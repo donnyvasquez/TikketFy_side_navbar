@@ -43,6 +43,20 @@
     <div class="row">
       <!-- Izquierda: Lista de Categorías y Controles -->
       <div class="col-md-6">
+        <div class="mb-3">
+            <h5 for="" class="form-label">Select Terminal profile</h5>
+            <select
+                class="form-select form-select-sm"
+                name=""
+                id=""
+            >
+                <option selected>Select one</option>
+                <option value="">New Delhi</option>
+                <option value="">Istanbul</option>
+                <option value="">Jakarta</option>
+            </select>
+        </div>
+        
         <h6>Categories</h6>
         <div class="mb-2">
           <label for="orderTypeSelect" class="form-label">Order by:</label>
@@ -67,10 +81,6 @@
           <!-- La vista previa se actualizará dinámicamente -->
         </div>
       </div>
-    </div>
-    <!-- Botón de salir en el footer de la modal -->
-    <div class="mt-3 text-end">
-      <button id="exitBtn" class="btn btn-secondary" onclick="window.parent.bootstrap.Modal.getInstance(window.parent.document.getElementById('modalContainer')).hide()">Exit</button>
     </div>
   </div>
   
