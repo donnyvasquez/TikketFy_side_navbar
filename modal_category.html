@@ -11,7 +11,6 @@
     body { font-size: 14px; margin: 0; }
     #categoryList .list-group-item { user-select: none; position: relative; }
     .sortable-ghost { opacity: 0.5; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: grabbing; }
-    /* Fixed max height for preview and scroll */
     #previewPanel { width: 315px; max-height: 750px; overflow-y: auto; }
     .drag-handle { cursor: grab; font-size: 1.25rem; }
     .drag-handle:active { cursor: grabbing; }
@@ -24,21 +23,24 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container py-5">
     <div class="row">
       <div class="col-md-7">
-        <!-- Terminal Profile Selector -->
+        <!-- Terminal Profile Selector + Save -->
         <div class="mb-3">
           <h5 class="form-label">Select Terminal profile</h5>
-          <select class="form-select form-select-sm">
-            <option selected>Select one</option>
-            <option>New Delhi</option>
-            <option>Istanbul</option>
-            <option>Jakarta</option>
-          </select>
+          <div class="d-flex gap-2">
+            <select id="terminalProfile" class="form-select form-select-sm">
+              <option selected>Select one</option>
+              <option>New Delhi</option>
+              <option>Istanbul</option>
+              <option>Jakarta</option>
+            </select>
+            <button id="saveBtn" class="btn btn-primary text-nowrap d-none">Save changes</button>
+          </div>
         </div>
 
-        <!-- Controls: GroupBy, ShowProducts, ToggleAll -->
+        <!-- Controls: GroupBy, ShowProducts -->
         <div class="d-flex gap-4 mb-3">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="groupByCheckbox">
@@ -50,26 +52,27 @@
           </div>
         </div>
 
-        <!-- Category Ordering Controls -->
-        <div class="d-flex">
-          <h6>Categories
-          </h6>
-          <div class="d-inline-block ms-3 form-check form-switch">
+        <!-- Categories title + Toggle All -->
+        <div class="d-flex align-items-center mb-2">
+          <h6 class="mb-0">Categories</h6>
+          <div class="form-check form-switch ms-3">
             <input class="form-check-input" type="checkbox" id="toggleAllCheckbox">
             <label class="form-check-label" for="toggleAllCheckbox">Activate all categories</label>
           </div>
         </div>
-        <div class="mb-2">
-          <label for="orderTypeSelect" class="form-label">Order by:</label>
+
+        <!-- Ordering + Reset -->
+        <div class="mb-3">
+          <label for="orderTypeSelect" class="form-label me-2">Order by:</label>
           <select id="orderTypeSelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
             <option value="alphabetical" selected>Alphabetical</option>
             <option value="creation">Creation Date</option>
           </select>
-          <select id="orderDirectionSelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
+          <select id="orderDirectionSelect" class="form-select form-select-sm d-inline-block ms-2" style="width: auto;">
             <option value="asc" selected>Ascending</option>
             <option value="desc">Descending</option>
           </select>
-          <button id="resetBtn" class="btn btn-sm btn-secondary d-none">Reset</button>
+          <button id="resetBtn" class="btn btn-secondary btn-sm ms-3 d-none">Reset</button>
         </div>
 
         <!-- Category List -->
@@ -77,33 +80,34 @@
       </div>
 
       <!-- Device Preview -->
-      <div class="align-items-center bg-body-tertiary bottom-0 col-md-5 d-md-flex d-none end-0 flex-column p-4 position-fixed rounded-4 top-0">
+      <div class="col-md-5 position-fixed end-0 top-0 bottom-0 bg-body-tertiary p-4 d-none d-md-flex flex-column">
         <h6>Device Preview</h6>
-        <div id="previewPanel" class="card p-2"></div>
+        <div id="previewPanel" class="card p-2 flex-grow-1 overflow-auto"></div>
       </div>
     </div>
   </div>
 
-  <!-- Warning Modal for Group By -->
+  <!-- Warning Modal -->
   <div class="modal fade" id="groupByModal" tabindex="-1" aria-labelledby="groupByModalLabel" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="groupByModalLabel">Notice</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 id="groupByModalLabel" class="modal-title">Notice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         Disabling "Group by categories" will switch to a flat product list view, but you can still toggle each category's visibility independently.
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" id="groupByConfirm">OK</button>
+        <button id="groupByConfirm" class="btn btn-primary">OK</button>
       </div>
     </div></div>
   </div>
 
-  <!-- Bootstrap JS Bundle and SortableJS -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
   <script>
+    // --- Sample Data ---
     const defaultCategories = [
       { id:1, name:"Food", created:"2022-01-05", tickets:15, active:true },
       { id:2, name:"Beverages", created:"2022-02-10", tickets:10, active:true },
@@ -114,52 +118,43 @@
       { id:7, name:"Transport", created:"2022-06-15", tickets:9, active:true },
       { id:8, name:"Entertainment", created:"2022-07-10", tickets:11, active:true },
       { id:9, name:"Adventures", created:"2022-08-05", tickets:6, active:true },
-      { id:10, name:"Leisure", created:"2022-09-12", tickets:4, active:true }
+      { id:10,name:"Leisure",   created:"2022-09-12", tickets:4, active:true }
     ];
 
     const products = [
-      // Food
       { id:101, categoryId:1, name:"Gourmet Pizza Night", price:25.99, image:"https://picsum.photos/200?pid=101" },
-      { id:102, categoryId:1, name:"Taco Fiesta", price:18.50, image:"https://picsum.photos/200?pid=102" },
-      { id:103, categoryId:1, name:"Sushi Sampling", price:30.00, image:"https://picsum.photos/200?pid=103" },
-      // Beverages
-      { id:201, categoryId:2, name:"Wine Tasting Event", price:45.00, image:"https://picsum.photos/200?pid=201" },
+      { id:102, categoryId:1, name:"Taco Fiesta",         price:18.50, image:"https://picsum.photos/200?pid=102" },
+      { id:103, categoryId:1, name:"Sushi Sampling",      price:30.00, image:"https://picsum.photos/200?pid=103" },
+      { id:201, categoryId:2, name:"Wine Tasting Event",  price:45.00, image:"https://picsum.photos/200?pid=201" },
       { id:202, categoryId:2, name:"Craft Beer Festival", price:35.75, image:"https://picsum.photos/200?pid=202" },
-      { id:203, categoryId:2, name:"Coffee Connoisseur Tour", price:22.00, image:"https://picsum.photos/200?pid=203" },
-      // Snacks
-      { id:301, categoryId:3, name:"Snack Platter Special", price:14.50, image:"https://picsum.photos/200?pid=301" },
-      { id:302, categoryId:3, name:"Chocolate Fondue Night", price:20.00, image:"https://picsum.photos/200?pid=302" },
-      { id:303, categoryId:3, name:"Popcorn & Movie", price:12.99, image:"https://picsum.photos/200?pid=303" },
-      // Recreation
-      { id:401, categoryId:4, name:"Guided Museum Tour", price:18.00, image:"https://picsum.photos/200?pid=401" },
-      { id:402, categoryId:4, name:"City Bike Adventure", price:25.00, image:"https://picsum.photos/200?pid=402" },
-      { id:403, categoryId:4, name:"Kayaking Trip", price:40.00, image:"https://picsum.photos/200?pid=403" },
-      // Tours
-      { id:501, categoryId:5, name:"Historic City Walk", price:30.00, image:"https://picsum.photos/200?pid=501" },
-      { id:502, categoryId:5, name:"Culinary Street Tour", price:50.00, image:"https://picsum.photos/200?pid=502" },
-      { id:503, categoryId:5, name:"Wine Country Excursion", price:60.00, image:"https://picsum.photos/200?pid=503" },
-      // Vehicles
-      { id:601, categoryId:6, name:"Classic Car Ride", price:75.00, image:"https://picsum.photos/200?pid=601" },
-      { id:602, categoryId:6, name:"Hot Air Balloon", price:120.00, image:"https://picsum.photos/200?pid=602" },
-      { id:603, categoryId:6, name:"Helicopter Tour", price:200.00, image:"https://picsum.photos/200?pid=603" },
-      // Transport
-      { id:701, categoryId:7, name:"Private Yacht Charter", price:500.00, image:"https://picsum.photos/200?pid=701" },
-      { id:702, categoryId:7, name:"Luxury Chauffeur", price:150.00, image:"https://picsum.photos/200?pid=702" },
-      { id:703, categoryId:7, name:"Airport Shuttle Service", price:30.00, image:"https://picsum.photos/200?pid=703" },
-      // Entertainment
-      { id:801, categoryId:8, name:"Live Concert: Jazz", price:65.00, image:"https://picsum.photos/200?pid=801" },
-      { id:802, categoryId:8, name:"Rock Fest 2023", price:80.00, image:"https://picsum.photos/200?pid=802" },
-      { id:803, categoryId:8, name:"Stand-Up Comedy Night", price:50.00, image:"https://picsum.photos/200?pid=803" },
-      // Adventures
-      { id:901, categoryId:9, name:"Mountain Hiking", price:45.00, image:"https://picsum.photos/200?pid=901" },
-      { id:902, categoryId:9, name:"Scuba Diving", price:90.00, image:"https://picsum.photos/200?pid=902" },
-      { id:903, categoryId:9, name:"Skydiving Experience", price:250.00, image:"https://picsum.photos/200?pid=903" },
-      // Leisure
-      { id:1001, categoryId:10, name:"Yoga Retreat", price:70.00, image:"https://picsum.photos/200?pid=1001" },
-      { id:1002, categoryId:10, name:"Spa Day Package", price:120.00, image:"https://picsum.photos/200?pid=1002" },
-      { id:1003, categoryId:10, name:"Golf Course Access", price:40.00, image:"https://picsum.photos/200?pid=1003" }
+      { id:203, categoryId:2, name:"Coffee Tour",         price:22.00, image:"https://picsum.photos/200?pid=203" },
+      { id:301, categoryId:3, name:"Snack Platter",       price:14.50, image:"https://picsum.photos/200?pid=301" },
+      { id:302, categoryId:3, name:"Chocolate Fondue",    price:20.00, image:"https://picsum.photos/200?pid=302" },
+      { id:303, categoryId:3, name:"Popcorn & Movie",     price:12.99, image:"https://picsum.photos/200?pid=303" },
+      { id:401, categoryId:4, name:"Museum Tour",         price:18.00, image:"https://picsum.photos/200?pid=401" },
+      { id:402, categoryId:4, name:"Bike Adventure",      price:25.00, image:"https://picsum.photos/200?pid=402" },
+      { id:403, categoryId:4, name:"Kayaking Trip",       price:40.00, image:"https://picsum.photos/200?pid=403" },
+      { id:501, categoryId:5, name:"Historic Walk",       price:30.00, image:"https://picsum.photos/200?pid=501" },
+      { id:502, categoryId:5, name:"Culinary Street Tour",price:50.00, image:"https://picsum.photos/200?pid=502" },
+      { id:503, categoryId:5, name:"Wine Country Excursion",price:60.00,image:"https://picsum.photos/200?pid=503"},
+      { id:601, categoryId:6, name:"Classic Car Ride",    price:75.00, image:"https://picsum.photos/200?pid=601" },
+      { id:602, categoryId:6, name:"Hot Air Balloon",     price:120.00,image:"https://picsum.photos/200?pid=602" },
+      { id:603, categoryId:6, name:"Helicopter Tour",     price:200.00,image:"https://picsum.photos/200?pid=603" },
+      { id:701, categoryId:7, name:"Yacht Charter",       price:500.00,image:"https://picsum.photos/200?pid=701" },
+      { id:702, categoryId:7, name:"Chauffeur Service",   price:150.00,image:"https://picsum.photos/200?pid=702" },
+      { id:703, categoryId:7, name:"Shuttle Service",     price:30.00,image:"https://picsum.photos/200?pid=703" },
+      { id:801, categoryId:8, name:"Jazz Concert",        price:65.00, image:"https://picsum.photos/200?pid=801" },
+      { id:802, categoryId:8, name:"Rock Fest",           price:80.00, image:"https://picsum.photos/200?pid=802" },
+      { id:803, categoryId:8, name:"Comedy Night",        price:50.00, image:"https://picsum.photos/200?pid=803" },
+      { id:901, categoryId:9, name:"Mountain Hiking",     price:45.00, image:"https://picsum.photos/200?pid=901" },
+      { id:902, categoryId:9, name:"Scuba Diving",        price:90.00, image:"https://picsum.photos/200?pid=902" },
+      { id:903, categoryId:9, name:"Skydiving",           price:250.00,image:"https://picsum.photos/200?pid=903"},
+      {id:1001,categoryId:10,name:"Yoga Retreat",        price:70.00, image:"https://picsum.photos/200?pid=1001"},
+      {id:1002,categoryId:10,name:"Spa Day",             price:120.00,image:"https://picsum.photos/200?pid=1002"},
+      {id:1003,categoryId:10,name:"Golf Access",         price:40.00, image:"https://picsum.photos/200?pid=1003"}
     ];
 
+    // --- State & Persistence ---
     let categories, movedHistory, groupBy, showProducts;
 
     function getSaved(key, fallback) {
@@ -171,19 +166,21 @@
       catch {}
     }
 
+    // --- Core Functions ---
     function sortAndSaveDefaults() {
-      categories = [...defaultCategories].sort((a,b)=>a.name.localeCompare(b.name));
+      categories     = [...defaultCategories].sort((a,b)=>a.name.localeCompare(b.name));
+      movedHistory   = [];
+      groupBy        = true;
+      showProducts   = true;
       save('categories', categories);
-      movedHistory = [];
       save('movedHistory', movedHistory);
-      groupBy = true; save('groupBy', groupBy);
-      showProducts = true; save('showProducts', showProducts);
-      document.getElementById('orderTypeSelect').value = 'alphabetical';
-      document.getElementById('orderDirectionSelect').value = 'asc';
-      document.getElementById('groupByCheckbox').checked = true;
-      document.getElementById('showProductsCheckbox').checked = true;
-      document.getElementById('showProductsContainer').style.display = 'block';
-      // reset all-categories toggle
+      save('groupBy', groupBy);
+      save('showProducts', showProducts);
+      document.getElementById('orderTypeSelect').value     = 'alphabetical';
+      document.getElementById('orderDirectionSelect').value= 'asc';
+      document.getElementById('groupByCheckbox').checked    = true;
+      document.getElementById('showProductsCheckbox').checked=true;
+      document.getElementById('showProductsContainer').style.display='block';
       document.getElementById('toggleAllCheckbox').checked = true;
     }
 
@@ -198,7 +195,10 @@
           <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
               <i class="bi bi-grip-vertical drag-handle me-2"></i>
-              <div><strong>${cat.name}</strong><br><small>Created: ${new Date(cat.created).toLocaleDateString()}</small></div>
+              <div>
+                <strong>${cat.name}</strong><br>
+                <small>Created: ${new Date(cat.created).toLocaleDateString()}</small>
+              </div>
             </div>
             <div class="d-flex align-items-center">
               <span class="badge bg-primary rounded-pill">${cat.tickets} Tickets</span>
@@ -206,9 +206,7 @@
                 <input class="form-check-input" type="checkbox" id="switch-${cat.id}" ${cat.active?'checked':''}>
               </div>
             </div>
-          </div>
-        `;
-        // moved badge
+          </div>`;
         const badgeIndex = movedHistory.indexOf(cat.id);
         if (badgeIndex > -1) {
           const badge = document.createElement('span');
@@ -217,17 +215,13 @@
           li.appendChild(badge);
         }
         list.appendChild(li);
-
-        // individual toggle listener
         document.getElementById(`switch-${cat.id}`)
           .addEventListener('change', e => {
             cat.active = e.target.checked;
             save('categories', categories);
             renderPreview(categories);
-            document.getElementById('resetBtn').classList.remove('d-none');
-            // update “all categories” toggle
-            document.getElementById('toggleAllCheckbox').checked =
-              categories.every(c => c.active);
+            markDirty();
+            document.getElementById('toggleAllCheckbox').checked = categories.every(c => c.active);
           });
       });
     }
@@ -235,36 +229,33 @@
     function renderPreview(items) {
       const preview = document.getElementById('previewPanel');
       preview.innerHTML = '';
-      const activeWithProducts = items.filter(c => c.active && products.some(p => p.categoryId === c.id));
+      const activeCats = items.filter(c => c.active && products.some(p => p.categoryId === c.id));
       if (groupBy) {
         document.getElementById('showProductsContainer').style.display = 'block';
         if (showProducts) {
-          activeWithProducts.forEach(cat => {
+          activeCats.forEach(cat => {
             const header = document.createElement('div');
             header.className = 'category-header';
             header.innerHTML = `
               <span><strong>${cat.name}</strong></span>
-              <span class="badge bg-secondary rounded-pill">${cat.tickets} Tickets</span>
-            `;
+              <span class="badge bg-secondary rounded-pill">${cat.tickets} Tickets</span>`;
             preview.appendChild(header);
-            products.filter(p => p.categoryId === cat.id)
-              .forEach(prod => {
-                const card = document.createElement('div');
-                card.className = 'product-card';
-                card.innerHTML = `
-                  <div class="d-flex align-items-center">
-                    <img src="${prod.image}" alt="${prod.name}">
-                    <div>
-                      <div>${prod.name}</div>
-                      <div class="text-muted">$${prod.price.toFixed(2)}</div>
-                    </div>
+            products.filter(p => p.categoryId === cat.id).forEach(prod => {
+              const card = document.createElement('div');
+              card.className = 'product-card';
+              card.innerHTML = `
+                <div class="d-flex align-items-center">
+                  <img src="${prod.image}" alt="${prod.name}">
+                  <div>
+                    <div>${prod.name}</div>
+                    <div class="text-muted">$${prod.price.toFixed(2)}</div>
                   </div>
-                `;
-                preview.appendChild(card);
-              });
+                </div>`;
+              preview.appendChild(card);
+            });
           });
         } else {
-          activeWithProducts.forEach(cat => {
+          activeCats.forEach(cat => {
             const ccard = document.createElement('div');
             ccard.className = 'category-card';
             ccard.innerHTML = `
@@ -272,42 +263,44 @@
                 <strong>${cat.name}</strong><br>
                 <small>${cat.tickets} Tickets</small>
               </div>
-              <i class="bi bi-chevron-right"></i>
-            `;
+              <i class="bi bi-chevron-right"></i>`;
             preview.appendChild(ccard);
           });
         }
       } else {
         document.getElementById('showProductsContainer').style.display = 'none';
-        products.filter(p => activeWithProducts.some(c => c.id === p.categoryId))
-          .forEach(prod => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-              <div class="d-flex align-items-center">
-                <img src="${prod.image}" alt="${prod.name}">
-                <div>
-                  <div>${prod.name}</div>
-                  <div class="text-muted">$${prod.price.toFixed(2)}</div>
-                </div>
+        products.filter(p => activeCats.some(c => c.id === p.categoryId)).forEach(prod => {
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <div class="d-flex align-items-center">
+              <img src="${prod.image}" alt="${prod.name}">
+              <div>
+                <div>${prod.name}</div>
+                <div class="text-muted">$${prod.price.toFixed(2)}</div>
               </div>
-            `;
-            preview.appendChild(card);
-          });
+            </div>`;
+          preview.appendChild(card);
+        });
       }
     }
 
     function sortCategories(orderType, orderDir) {
       let sorted = [...categories];
       if (orderType === 'alphabetical') sorted.sort((a,b)=>a.name.localeCompare(b.name));
-      else sorted.sort((a,b)=>new Date(a.created) - new Date(b.created));
+      else sorted.sort((a,b)=>new Date(a.created)-new Date(b.created));
       if (orderDir === 'desc') sorted.reverse();
       categories = sorted;
-      save('categories', categories);
       movedHistory = [];
+      save('categories', categories);
       save('movedHistory', movedHistory);
       renderCategoryList(categories);
       renderPreview(categories);
+    }
+
+    function markDirty() {
+      document.getElementById('resetBtn').classList.remove('d-none');
+      document.getElementById('saveBtn').classList.remove('d-none');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -322,47 +315,14 @@
       const showProdChk= document.getElementById('showProductsCheckbox');
       const toggleAll  = document.getElementById('toggleAllCheckbox');
       const resetBtn   = document.getElementById('resetBtn');
+      const saveBtn    = document.getElementById('saveBtn');
+      const terminalSelect = document.getElementById('terminalProfile');
       const groupModal = new bootstrap.Modal(document.getElementById('groupByModal'));
 
-      // Ordering listeners
-      orderType.addEventListener('change', () => { sortCategories(orderType.value, orderDir.value); resetBtn.classList.remove('d-none'); });
-      orderDir.addEventListener('change',  () => { sortCategories(orderType.value, orderDir.value); resetBtn.classList.remove('d-none'); });
+      // Initial UI state
+      orderType.addEventListener('change', ()=>{ sortCategories(orderType.value, orderDir.value); markDirty(); });
+      orderDir.addEventListener('change',  ()=>{ sortCategories(orderType.value, orderDir.value); markDirty(); });
 
-      // Reset listener
-      resetBtn.addEventListener('click', () => {
-        sortAndSaveDefaults();
-        renderCategoryList(categories);
-        renderPreview(categories);
-        resetBtn.classList.add('d-none');
-      });
-
-      // GroupBy listener
-      groupChk.checked = groupBy;
-      groupChk.addEventListener('change', e => {
-        if (!e.target.checked) groupModal.show();
-        else {
-          groupBy = true; save('groupBy', groupBy);
-          renderPreview(categories);
-          resetBtn.classList.remove('d-none');
-        }
-      });
-      document.getElementById('groupByConfirm').addEventListener('click', () => {
-        groupModal.hide();
-        groupBy = false; save('groupBy', groupBy);
-        renderPreview(categories);
-        resetBtn.classList.remove('d-none');
-      });
-
-      // ShowProducts listener
-      showProdChk.checked = showProducts;
-      showProdChk.addEventListener('change', e => {
-        showProducts = e.target.checked; save('showProducts', showProducts);
-        renderPreview(categories);
-        resetBtn.classList.remove('d-none');
-      });
-
-      // Toggle All Categories listener
-      // initial state based on current categories
       toggleAll.checked = categories.every(c => c.active);
       toggleAll.addEventListener('change', e => {
         const state = e.target.checked;
@@ -370,10 +330,59 @@
         save('categories', categories);
         renderCategoryList(categories);
         renderPreview(categories);
-        resetBtn.classList.remove('d-none');
+        markDirty();
       });
 
-      // Drag & Drop
+      groupChk.checked = groupBy;
+      groupChk.addEventListener('change', e => {
+        if (!e.target.checked) groupModal.show();
+        else {
+          groupBy = true; save('groupBy', groupBy);
+          renderPreview(categories);
+          markDirty();
+        }
+      });
+      document.getElementById('groupByConfirm').addEventListener('click', () => {
+        groupModal.hide();
+        groupBy = false; save('groupBy', groupBy);
+        renderPreview(categories);
+        markDirty();
+      });
+
+      showProdChk.checked = showProducts;
+      showProdChk.addEventListener('change', e => {
+        showProducts = e.target.checked; save('showProducts', showProducts);
+        renderPreview(categories);
+        markDirty();
+      });
+
+      resetBtn.addEventListener('click', () => {
+        sortAndSaveDefaults();
+        renderCategoryList(categories);
+        renderPreview(categories);
+        resetBtn.classList.add('d-none');
+        saveBtn.classList.add('d-none');
+      });
+
+      saveBtn.addEventListener('click', () => {
+        const profile = terminalSelect.value;
+        const config = { categories, movedHistory, groupBy, showProducts };
+        // TODO: replace with real API call
+        console.log('Saving config for', profile, config);
+        saveBtn.classList.add('d-none');
+        resetBtn.classList.add('d-none');
+        alert('Configuration saved successfully for ' + profile);
+      });
+
+      terminalSelect.addEventListener('change', () => {
+        const profile = terminalSelect.value;
+        // TODO: load config for `profile` from server or localStorage
+        // If none, call sortAndSaveDefaults()
+        saveBtn.classList.add('d-none');
+        resetBtn.classList.add('d-none');
+        // then renderCategoryList(categories) & renderPreview(categories)
+      });
+
       new Sortable(document.getElementById('categoryList'), {
         animation: 150,
         ghostClass: 'sortable-ghost',
@@ -387,7 +396,7 @@
           save('movedHistory', movedHistory);
           renderCategoryList(categories);
           renderPreview(categories);
-          resetBtn.classList.remove('d-none');
+          markDirty();
         }
       });
 
