@@ -8,56 +8,57 @@
   <!-- Bootstrap Icons CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <style>
-    body {
-      font-size: 14px;
-      margin: 0;
-    }
-    /* Lista de categorías en el lado izquierdo */
-    #categoryList .list-group-item {
-      user-select: none;
-      position: relative; /* Para posicionar el badge "Moved" */
-    }
-    .sortable-ghost {
-      opacity: 0.5;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      cursor: grabbing;
-    }
-    /* Preview del dispositivo: ancho máximo de 320px y scroll interno */
-    #previewPanel {
-      max-width: 320px;
-      height: 100%;
-      overflow-y: auto;
-    }
-    /* Estilo para el drag handle (ícono) */
-    .drag-handle {
-      cursor: grab;
-      font-size: 1.25rem;
-    }
-    .drag-handle:active {
-      cursor: grabbing;
-    }
+    body { font-size: 14px; margin: 0; }
+    #categoryList .list-group-item { user-select: none; position: relative; }
+    .sortable-ghost { opacity: 0.5; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: grabbing; }
+    /* Fixed max height for preview and scroll */
+    #previewPanel { width: 315px; max-height: 750px; overflow-y: auto; }
+    .drag-handle { cursor: grab; font-size: 1.25rem; }
+    .drag-handle:active { cursor: grabbing; }
+    .product-card { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0.5rem; border: 1px solid #e0e0e0; border-radius: 0.25rem; }
+    .product-card img { width: 40px; height: 40px; object-fit: cover; border-radius: 0.25rem; margin-right: 0.75rem; }
+    .category-card { cursor: pointer; margin-bottom: 0.5rem; padding: 0.75rem; border: 1px solid #e0e0e0; border-radius: 0.25rem; display: flex; justify-content: space-between; align-items: center; }
+    .category-card:hover { background-color: #f8f9fa; }
+    .moved-badge { position: absolute; top: 8px; right: 8px; }
+    .category-header { margin-top: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; }
   </style>
 </head>
 <body>
-  <div class="container-fluid">
+  <div class="container">
     <div class="row">
-      <!-- Izquierda: Lista de Categorías y Controles -->
-      <div class="col-md-6">
+      <div class="col-md-7">
+        <!-- Terminal Profile Selector -->
         <div class="mb-3">
-            <h5 for="" class="form-label">Select Terminal profile</h5>
-            <select
-                class="form-select form-select-sm"
-                name=""
-                id=""
-            >
-                <option selected>Select one</option>
-                <option value="">New Delhi</option>
-                <option value="">Istanbul</option>
-                <option value="">Jakarta</option>
-            </select>
+          <h5 class="form-label">Select Terminal profile</h5>
+          <select class="form-select form-select-sm">
+            <option selected>Select one</option>
+            <option>New Delhi</option>
+            <option>Istanbul</option>
+            <option>Jakarta</option>
+          </select>
         </div>
-        
-        <h6>Categories</h6>
+
+        <!-- Controls: GroupBy, ShowProducts, ToggleAll -->
+        <div class="d-flex gap-4 mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="groupByCheckbox">
+            <label class="form-check-label" for="groupByCheckbox">Group by categories</label>
+          </div>
+          <div class="form-check" id="showProductsContainer" style="display:none;">
+            <input class="form-check-input" type="checkbox" id="showProductsCheckbox">
+            <label class="form-check-label" for="showProductsCheckbox">Show products</label>
+          </div>
+        </div>
+
+        <!-- Category Ordering Controls -->
+        <div class="d-flex">
+          <h6>Categories
+          </h6>
+          <div class="d-inline-block ms-3 form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="toggleAllCheckbox">
+            <label class="form-check-label" for="toggleAllCheckbox">Activate all categories</label>
+          </div>
+        </div>
         <div class="mb-2">
           <label for="orderTypeSelect" class="form-label">Order by:</label>
           <select id="orderTypeSelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
@@ -70,174 +71,330 @@
           </select>
           <button id="resetBtn" class="btn btn-sm btn-secondary d-none">Reset</button>
         </div>
-        <ul id="categoryList" class="list-group">
-          <!-- Los items se generarán mediante JavaScript -->
-        </ul>
+
+        <!-- Category List -->
+        <ul id="categoryList" class="list-group mb-4"></ul>
       </div>
-      <!-- Derecha: Preview del Device -->
-      <div class="col-md-6">
+
+      <!-- Device Preview -->
+      <div class="align-items-center bg-body-tertiary bottom-0 col-md-5 d-md-flex d-none end-0 flex-column p-4 position-fixed rounded-4 top-0">
         <h6>Device Preview</h6>
-        <div id="previewPanel" class="border p-2">
-          <!-- La vista previa se actualizará dinámicamente -->
-        </div>
+        <div id="previewPanel" class="card p-2"></div>
       </div>
     </div>
   </div>
-  
-  <!-- Bootstrap JS Bundle y SortableJS -->
+
+  <!-- Warning Modal for Group By -->
+  <div class="modal fade" id="groupByModal" tabindex="-1" aria-labelledby="groupByModalLabel" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="groupByModalLabel">Notice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Disabling "Group by categories" will switch to a flat product list view, but you can still toggle each category's visibility independently.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="groupByConfirm">OK</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Bootstrap JS Bundle and SortableJS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
   <script>
-    // Array por defecto de 10 categorías (en inglés) con la propiedad 'active'
     const defaultCategories = [
-      { id: 1, name: "Food", created: "2022-01-05", tickets: 15, active: true },
-      { id: 2, name: "Beverages", created: "2022-02-10", tickets: 10, active: true },
-      { id: 3, name: "Snacks", created: "2022-03-12", tickets: 8, active: true },
-      { id: 4, name: "Recreation", created: "2022-04-18", tickets: 12, active: true },
-      { id: 5, name: "Tours", created: "2022-05-20", tickets: 5, active: true },
-      { id: 6, name: "Vehicles", created: "2022-06-01", tickets: 7, active: true },
-      { id: 7, name: "Transport", created: "2022-06-15", tickets: 9, active: true },
-      { id: 8, name: "Entertainment", created: "2022-07-10", tickets: 11, active: true },
-      { id: 9, name: "Adventures", created: "2022-08-05", tickets: 6, active: true },
-      { id: 10, name: "Leisure", created: "2022-09-12", tickets: 4, active: true }
+      { id:1, name:"Food", created:"2022-01-05", tickets:15, active:true },
+      { id:2, name:"Beverages", created:"2022-02-10", tickets:10, active:true },
+      { id:3, name:"Snacks", created:"2022-03-12", tickets:8, active:true },
+      { id:4, name:"Recreation", created:"2022-04-18", tickets:12, active:true },
+      { id:5, name:"Tours", created:"2022-05-20", tickets:5, active:true },
+      { id:6, name:"Vehicles", created:"2022-06-01", tickets:7, active:true },
+      { id:7, name:"Transport", created:"2022-06-15", tickets:9, active:true },
+      { id:8, name:"Entertainment", created:"2022-07-10", tickets:11, active:true },
+      { id:9, name:"Adventures", created:"2022-08-05", tickets:6, active:true },
+      { id:10, name:"Leisure", created:"2022-09-12", tickets:4, active:true }
     ];
 
-    // Función para renderizar la lista de categorías en el lado izquierdo, con el switch incluido
-    function renderCategoryList(categories) {
+    const products = [
+      // Food
+      { id:101, categoryId:1, name:"Gourmet Pizza Night", price:25.99, image:"https://picsum.photos/200?pid=101" },
+      { id:102, categoryId:1, name:"Taco Fiesta", price:18.50, image:"https://picsum.photos/200?pid=102" },
+      { id:103, categoryId:1, name:"Sushi Sampling", price:30.00, image:"https://picsum.photos/200?pid=103" },
+      // Beverages
+      { id:201, categoryId:2, name:"Wine Tasting Event", price:45.00, image:"https://picsum.photos/200?pid=201" },
+      { id:202, categoryId:2, name:"Craft Beer Festival", price:35.75, image:"https://picsum.photos/200?pid=202" },
+      { id:203, categoryId:2, name:"Coffee Connoisseur Tour", price:22.00, image:"https://picsum.photos/200?pid=203" },
+      // Snacks
+      { id:301, categoryId:3, name:"Snack Platter Special", price:14.50, image:"https://picsum.photos/200?pid=301" },
+      { id:302, categoryId:3, name:"Chocolate Fondue Night", price:20.00, image:"https://picsum.photos/200?pid=302" },
+      { id:303, categoryId:3, name:"Popcorn & Movie", price:12.99, image:"https://picsum.photos/200?pid=303" },
+      // Recreation
+      { id:401, categoryId:4, name:"Guided Museum Tour", price:18.00, image:"https://picsum.photos/200?pid=401" },
+      { id:402, categoryId:4, name:"City Bike Adventure", price:25.00, image:"https://picsum.photos/200?pid=402" },
+      { id:403, categoryId:4, name:"Kayaking Trip", price:40.00, image:"https://picsum.photos/200?pid=403" },
+      // Tours
+      { id:501, categoryId:5, name:"Historic City Walk", price:30.00, image:"https://picsum.photos/200?pid=501" },
+      { id:502, categoryId:5, name:"Culinary Street Tour", price:50.00, image:"https://picsum.photos/200?pid=502" },
+      { id:503, categoryId:5, name:"Wine Country Excursion", price:60.00, image:"https://picsum.photos/200?pid=503" },
+      // Vehicles
+      { id:601, categoryId:6, name:"Classic Car Ride", price:75.00, image:"https://picsum.photos/200?pid=601" },
+      { id:602, categoryId:6, name:"Hot Air Balloon", price:120.00, image:"https://picsum.photos/200?pid=602" },
+      { id:603, categoryId:6, name:"Helicopter Tour", price:200.00, image:"https://picsum.photos/200?pid=603" },
+      // Transport
+      { id:701, categoryId:7, name:"Private Yacht Charter", price:500.00, image:"https://picsum.photos/200?pid=701" },
+      { id:702, categoryId:7, name:"Luxury Chauffeur", price:150.00, image:"https://picsum.photos/200?pid=702" },
+      { id:703, categoryId:7, name:"Airport Shuttle Service", price:30.00, image:"https://picsum.photos/200?pid=703" },
+      // Entertainment
+      { id:801, categoryId:8, name:"Live Concert: Jazz", price:65.00, image:"https://picsum.photos/200?pid=801" },
+      { id:802, categoryId:8, name:"Rock Fest 2023", price:80.00, image:"https://picsum.photos/200?pid=802" },
+      { id:803, categoryId:8, name:"Stand-Up Comedy Night", price:50.00, image:"https://picsum.photos/200?pid=803" },
+      // Adventures
+      { id:901, categoryId:9, name:"Mountain Hiking", price:45.00, image:"https://picsum.photos/200?pid=901" },
+      { id:902, categoryId:9, name:"Scuba Diving", price:90.00, image:"https://picsum.photos/200?pid=902" },
+      { id:903, categoryId:9, name:"Skydiving Experience", price:250.00, image:"https://picsum.photos/200?pid=903" },
+      // Leisure
+      { id:1001, categoryId:10, name:"Yoga Retreat", price:70.00, image:"https://picsum.photos/200?pid=1001" },
+      { id:1002, categoryId:10, name:"Spa Day Package", price:120.00, image:"https://picsum.photos/200?pid=1002" },
+      { id:1003, categoryId:10, name:"Golf Course Access", price:40.00, image:"https://picsum.photos/200?pid=1003" }
+    ];
+
+    let categories, movedHistory, groupBy, showProducts;
+
+    function getSaved(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch { return fallback; }
+    }
+    function save(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); }
+      catch {}
+    }
+
+    function sortAndSaveDefaults() {
+      categories = [...defaultCategories].sort((a,b)=>a.name.localeCompare(b.name));
+      save('categories', categories);
+      movedHistory = [];
+      save('movedHistory', movedHistory);
+      groupBy = true; save('groupBy', groupBy);
+      showProducts = true; save('showProducts', showProducts);
+      document.getElementById('orderTypeSelect').value = 'alphabetical';
+      document.getElementById('orderDirectionSelect').value = 'asc';
+      document.getElementById('groupByCheckbox').checked = true;
+      document.getElementById('showProductsCheckbox').checked = true;
+      document.getElementById('showProductsContainer').style.display = 'block';
+      // reset all-categories toggle
+      document.getElementById('toggleAllCheckbox').checked = true;
+    }
+
+    function renderCategoryList(items) {
       const list = document.getElementById('categoryList');
       list.innerHTML = '';
-      categories.forEach(cat => {
+      items.forEach(cat => {
         const li = document.createElement('li');
         li.className = 'list-group-item';
-        li.setAttribute('data-id', cat.id);
-        li.style.position = 'relative';
+        li.dataset.id = cat.id;
         li.innerHTML = `
           <div class="d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center order-first">
+            <div class="d-flex align-items-center">
               <i class="bi bi-grip-vertical drag-handle me-2"></i>
-              <div>
-                <strong>${cat.name}</strong><br>
-                <small>Created: ${new Date(cat.created).toLocaleDateString()}</small>
-              </div>
+              <div><strong>${cat.name}</strong><br><small>Created: ${new Date(cat.created).toLocaleDateString()}</small></div>
             </div>
             <div class="d-flex align-items-center">
               <span class="badge bg-primary rounded-pill">${cat.tickets} Tickets</span>
-              <div class="form-check form-switch ms-2 ">
-                <input class="form-check-input" type="checkbox" id="switch-${cat.id}" ${cat.active ? "checked" : ""}>
+              <div class="form-check form-switch ms-2">
+                <input class="form-check-input" type="checkbox" id="switch-${cat.id}" ${cat.active?'checked':''}>
               </div>
             </div>
           </div>
         `;
+        // moved badge
+        const badgeIndex = movedHistory.indexOf(cat.id);
+        if (badgeIndex > -1) {
+          const badge = document.createElement('span');
+          badge.className = 'moved-badge badge bg-warning rounded-pill';
+          badge.textContent = `#${badgeIndex+1}`;
+          li.appendChild(badge);
+        }
         list.appendChild(li);
-        // Agregar el eventListener al switch de este LI para actualizar el estado 'active'
-        const switchElement = li.querySelector(`#switch-${cat.id}`);
-        switchElement.addEventListener('change', function() {
-          cat.active = this.checked;
-          renderPreview(categories);
-          saveCategories(categories);
-        });
+
+        // individual toggle listener
+        document.getElementById(`switch-${cat.id}`)
+          .addEventListener('change', e => {
+            cat.active = e.target.checked;
+            save('categories', categories);
+            renderPreview(categories);
+            document.getElementById('resetBtn').classList.remove('d-none');
+            // update “all categories” toggle
+            document.getElementById('toggleAllCheckbox').checked =
+              categories.every(c => c.active);
+          });
       });
     }
 
-    // Función para renderizar el preview: solo se muestran las categorías activas
-    function renderPreview(categories) {
+    function renderPreview(items) {
       const preview = document.getElementById('previewPanel');
       preview.innerHTML = '';
-      categories.forEach(cat => {
-        if (!cat.active) return;
-        const div = document.createElement('div');
-        div.className = 'p-2 mb-2 border rounded';
-        div.innerHTML = `<strong>${cat.name}</strong> <span class="badge bg-secondary">${cat.tickets}</span>`;
-        preview.appendChild(div);
-      });
-    }
-
-    // Funciones para guardar y obtener el orden y estado en localStorage
-    function getSavedCategories() {
-      const saved = localStorage.getItem('categoryOrder');
-      return saved ? JSON.parse(saved) : defaultCategories;
-    }
-
-    function saveCategories(categories) {
-      localStorage.setItem('categoryOrder', JSON.stringify(categories));
-    }
-
-    let categories = getSavedCategories();
-
-    // Inicializa la modal
-    function initModal() {
-      categories = getSavedCategories();
-      renderCategoryList(categories);
-      renderPreview(categories);
-      document.getElementById('orderTypeSelect').value = 'alphabetical';
-      document.getElementById('orderDirectionSelect').value = 'asc';
-      document.getElementById('resetBtn').classList.add('d-none');
-    }
-
-    // Inicializar SortableJS en la lista de categorías usando el icono como handle
-    const sortable = new Sortable(document.getElementById('categoryList'), {
-      animation: 150,
-      ghostClass: 'sortable-ghost',
-      handle: '.drag-handle',
-      onEnd: function (evt) {
-        // Actualiza el arreglo de categorías según el nuevo orden en el DOM
-        const newOrder = [];
-        document.querySelectorAll('#categoryList li').forEach(li => {
-          const id = parseInt(li.getAttribute('data-id'));
-          const category = categories.find(cat => cat.id === id);
-          newOrder.push(category);
-        });
-        categories = newOrder;
-        // Inserta el badge "Moved" en el div interno del LI
-        if (!evt.item.firstElementChild.querySelector('.moved-badge')) {
-        evt.item.firstElementChild.insertAdjacentHTML('afterbegin', `
-          <span class="moved-badge badge bg-warning rounded-pill">
-            <span>Moved</span>
-          </span>
-        `);
+      const activeWithProducts = items.filter(c => c.active && products.some(p => p.categoryId === c.id));
+      if (groupBy) {
+        document.getElementById('showProductsContainer').style.display = 'block';
+        if (showProducts) {
+          activeWithProducts.forEach(cat => {
+            const header = document.createElement('div');
+            header.className = 'category-header';
+            header.innerHTML = `
+              <span><strong>${cat.name}</strong></span>
+              <span class="badge bg-secondary rounded-pill">${cat.tickets} Tickets</span>
+            `;
+            preview.appendChild(header);
+            products.filter(p => p.categoryId === cat.id)
+              .forEach(prod => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                  <div class="d-flex align-items-center">
+                    <img src="${prod.image}" alt="${prod.name}">
+                    <div>
+                      <div>${prod.name}</div>
+                      <div class="text-muted">$${prod.price.toFixed(2)}</div>
+                    </div>
+                  </div>
+                `;
+                preview.appendChild(card);
+              });
+          });
+        } else {
+          activeWithProducts.forEach(cat => {
+            const ccard = document.createElement('div');
+            ccard.className = 'category-card';
+            ccard.innerHTML = `
+              <div>
+                <strong>${cat.name}</strong><br>
+                <small>${cat.tickets} Tickets</small>
+              </div>
+              <i class="bi bi-chevron-right"></i>
+            `;
+            preview.appendChild(ccard);
+          });
         }
-
-        document.getElementById('resetBtn').classList.remove('d-none');
-        renderPreview(categories);
-        saveCategories(categories);
+      } else {
+        document.getElementById('showProductsContainer').style.display = 'none';
+        products.filter(p => activeWithProducts.some(c => c.id === p.categoryId))
+          .forEach(prod => {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+              <div class="d-flex align-items-center">
+                <img src="${prod.image}" alt="${prod.name}">
+                <div>
+                  <div>${prod.name}</div>
+                  <div class="text-muted">$${prod.price.toFixed(2)}</div>
+                </div>
+              </div>
+            `;
+            preview.appendChild(card);
+          });
       }
-    });
-
-    // Función para ordenar según los selectores
-    function sortCategories() {
-      const orderType = document.getElementById('orderTypeSelect').value;
-      const orderDir = document.getElementById('orderDirectionSelect').value;
-      let sorted = [...categories];
-      if (orderType === 'alphabetical') {
-        sorted.sort((a, b) => a.name.localeCompare(b.name));
-      } else if (orderType === 'creation') {
-        sorted.sort((a, b) => new Date(a.created) - new Date(b.created));
-      }
-      if (orderDir === 'desc') {
-        sorted.reverse();
-      }
-      categories = sorted;
-      renderCategoryList(categories);
-      renderPreview(categories);
-      saveCategories(categories);
     }
 
-    document.getElementById('orderTypeSelect').addEventListener('change', sortCategories);
-    document.getElementById('orderDirectionSelect').addEventListener('change', sortCategories);
-
-    // Botón Reset: vuelve al orden alfabético ascendente y guarda automáticamente
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      categories = [...defaultCategories].sort((a, b) => a.name.localeCompare(b.name));
+    function sortCategories(orderType, orderDir) {
+      let sorted = [...categories];
+      if (orderType === 'alphabetical') sorted.sort((a,b)=>a.name.localeCompare(b.name));
+      else sorted.sort((a,b)=>new Date(a.created) - new Date(b.created));
+      if (orderDir === 'desc') sorted.reverse();
+      categories = sorted;
+      save('categories', categories);
+      movedHistory = [];
+      save('movedHistory', movedHistory);
       renderCategoryList(categories);
       renderPreview(categories);
-      document.getElementById('orderTypeSelect').value = 'alphabetical';
-      document.getElementById('orderDirectionSelect').value = 'asc';
-      document.getElementById('resetBtn').classList.add('d-none');
-      saveCategories(categories);
-    });
+    }
 
-    // Inicializa la modal al cargar el contenido (cuando se cargue el iframe)
-    document.addEventListener('DOMContentLoaded', initModal);
+    document.addEventListener('DOMContentLoaded', () => {
+      categories     = getSaved('categories', defaultCategories);
+      movedHistory   = getSaved('movedHistory', []);
+      groupBy        = getSaved('groupBy', true);
+      showProducts   = getSaved('showProducts', true);
+
+      const orderType  = document.getElementById('orderTypeSelect');
+      const orderDir   = document.getElementById('orderDirectionSelect');
+      const groupChk   = document.getElementById('groupByCheckbox');
+      const showProdChk= document.getElementById('showProductsCheckbox');
+      const toggleAll  = document.getElementById('toggleAllCheckbox');
+      const resetBtn   = document.getElementById('resetBtn');
+      const groupModal = new bootstrap.Modal(document.getElementById('groupByModal'));
+
+      // Ordering listeners
+      orderType.addEventListener('change', () => { sortCategories(orderType.value, orderDir.value); resetBtn.classList.remove('d-none'); });
+      orderDir.addEventListener('change',  () => { sortCategories(orderType.value, orderDir.value); resetBtn.classList.remove('d-none'); });
+
+      // Reset listener
+      resetBtn.addEventListener('click', () => {
+        sortAndSaveDefaults();
+        renderCategoryList(categories);
+        renderPreview(categories);
+        resetBtn.classList.add('d-none');
+      });
+
+      // GroupBy listener
+      groupChk.checked = groupBy;
+      groupChk.addEventListener('change', e => {
+        if (!e.target.checked) groupModal.show();
+        else {
+          groupBy = true; save('groupBy', groupBy);
+          renderPreview(categories);
+          resetBtn.classList.remove('d-none');
+        }
+      });
+      document.getElementById('groupByConfirm').addEventListener('click', () => {
+        groupModal.hide();
+        groupBy = false; save('groupBy', groupBy);
+        renderPreview(categories);
+        resetBtn.classList.remove('d-none');
+      });
+
+      // ShowProducts listener
+      showProdChk.checked = showProducts;
+      showProdChk.addEventListener('change', e => {
+        showProducts = e.target.checked; save('showProducts', showProducts);
+        renderPreview(categories);
+        resetBtn.classList.remove('d-none');
+      });
+
+      // Toggle All Categories listener
+      // initial state based on current categories
+      toggleAll.checked = categories.every(c => c.active);
+      toggleAll.addEventListener('change', e => {
+        const state = e.target.checked;
+        categories.forEach(c => c.active = state);
+        save('categories', categories);
+        renderCategoryList(categories);
+        renderPreview(categories);
+        resetBtn.classList.remove('d-none');
+      });
+
+      // Drag & Drop
+      new Sortable(document.getElementById('categoryList'), {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        handle: '.drag-handle',
+        onEnd(evt) {
+          categories = Array.from(document.querySelectorAll('#categoryList li'))
+            .map(li => categories.find(c => c.id == li.dataset.id));
+          save('categories', categories);
+          const movedId = +evt.item.dataset.id;
+          if (!movedHistory.includes(movedId)) movedHistory.push(movedId);
+          save('movedHistory', movedHistory);
+          renderCategoryList(categories);
+          renderPreview(categories);
+          resetBtn.classList.remove('d-none');
+        }
+      });
+
+      // Initial render
+      renderCategoryList(categories);
+      renderPreview(categories);
+    });
   </script>
 </body>
 </html>
