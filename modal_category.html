@@ -361,7 +361,7 @@
         renderCategoryList(categories);
         renderPreview(categories);
         resetBtn.classList.add('d-none');
-        saveBtn.classList.add('d-none');
+        saveBtn.classList.remove('d-none');
       });
 
       saveBtn.addEventListener('click', () => {
@@ -370,7 +370,6 @@
         // TODO: replace with real API call
         console.log('Saving config for', profile, config);
         saveBtn.classList.add('d-none');
-        resetBtn.classList.add('d-none');
         alert('Configuration saved successfully for ' + profile);
       });
 

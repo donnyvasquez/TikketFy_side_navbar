@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ticket Layout - Reorder Products</title>
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body { font-size: 14px; margin: 0; }
+    #productList .list-group-item { user-select: none; position: relative; }
+    .sortable-ghost { opacity: 0.5; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: grabbing; }
+    .drag-handle { cursor: grab; font-size: 1.25rem; }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* Imágenes en la lista de drag: 64×64 */
+    .drag-img {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 0.25rem;
+      margin-right: 0.75rem;
+    }
+
+    /* Imágenes en la vista previa siguen 40×40 */
+    .product-card img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 0.25rem;
+      margin-right: 0.75rem;
+    }
+
+    #previewPanel  { width: 315px; max-height: 750px; overflow-y: auto; }
+    #pinnedPanel   { display: flex; overflow-x: auto; gap: 0.5rem; margin-bottom: 1rem; }
+    .product-card { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0.5rem; border: 1px solid #e0e0e0; border-radius: 0.25rem; }
+    .moved-badge  { position: absolute; top: 8px; right: 8px; }
+    .pin-icon     { cursor: pointer; font-size: 1.2rem; margin-left: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    <div class="row">
+      <!-- Izquierda: lista draggable -->
+      <div class="col-md-7">
+        <div class="mb-3">
+          <h5 class="form-label">Select Category</h5>
+          <div class="d-flex gap-2">
+            <select id="categorySelect" class="form-select form-select-sm">
+              <option selected disabled>Select one</option>
+            </select>
+            <button id="saveBtn" class="btn btn-primary text-nowrap d-none">Save changes</button>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="orderTypeSelect" class="form-label me-2">Order by:</label>
+          <select id="orderTypeSelect" class="form-select form-select-sm d-inline-block" style="width:auto;">
+            <option value="alphabetical" selected>Alphabetical</option>
+            <option value="price">Price</option>
+          </select>
+          <select id="orderDirectionSelect" class="form-select form-select-sm d-inline-block ms-2" style="width:auto;">
+            <option value="asc" selected>Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+          <button id="resetBtn" class="btn btn-secondary btn-sm ms-3 d-none">Reset</button>
+        </div>
+
+        <ul id="productList" class="list-group mb-4"></ul>
+      </div>
+
+      <!-- Derecha: vista previa -->
+      <div class="col-md-5 position-fixed end-0 top-0 bottom-0 bg-body-tertiary p-4 d-none d-md-flex flex-column">
+        <h6>Device Preview</h6>
+        <div id="previewPanel" class="card p-2 flex-grow-1 overflow-auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <script>
+    // --- Datos de ejemplo ---
+    const defaultCategories = [
+      { id:1,  name:"Food" },
+      { id:2,  name:"Beverages" },
+      { id:3,  name:"Snacks" },
+      { id:4,  name:"Recreation" },
+      { id:5,  name:"Tours" },
+      { id:6,  name:"Vehicles" },
+      { id:7,  name:"Transport" },
+      { id:8,  name:"Entertainment" },
+      { id:9,  name:"Adventures" },
+      { id:10, name:"Leisure" }
+    ];
+
+    // Genera 5 productos por categoría (más de 3 y menos de 7)
+    const products = [];
+    defaultCategories.forEach(cat => {
+      for (let i = 1; i <= 5; i++) {
+        products.push({
+          id: cat.id * 100 + i,
+          categoryId: cat.id,
+          name: `${cat.name} Ticket ${i}`,
+          price: (10 + cat.id * 2 + i * 3).toFixed(2),
+          image: `https://picsum.photos/200/200?random=${cat.id * 10 + i}`
+        });
+      }
+    });
+
+    // --- Estado y persistencia ---
+    let currentCategoryId;
+    let listItems, movedHistory;
+    // pinnedHistory es GLOBAL: persiste aunque cambies de categoría
+    let pinnedHistory = JSON.parse(localStorage.getItem('pinnedHistory') || '[]');
+
+    function getSaved(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch { return fallback; }
+    }
+    function save(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); }
+      catch {}
+    }
+
+    function productsByCategory(catId) {
+      return products.filter(p => p.categoryId === catId);
+    }
+
+    function sortAndSaveDefaults() {
+      listItems    = productsByCategory(currentCategoryId)
+                       .sort((a,b)=> a.name.localeCompare(b.name))
+                       .map(p=> ({...p, active:true}));
+      movedHistory = [];
+      save(`items-${currentCategoryId}`, listItems);
+      save(`moved-${currentCategoryId}`, movedHistory);
+      // pinnedHistory NO se reinicia aquí: es global
+      document.getElementById('orderTypeSelect').value      = 'alphabetical';
+      document.getElementById('orderDirectionSelect').value = 'asc';
+    }
+
+    function renderProductList(items) {
+      const ul = document.getElementById('productList');
+      ul.innerHTML = '';
+      items.forEach(prod => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.dataset.id = prod.id;
+        li.innerHTML = `
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-grip-vertical drag-handle me-2"></i>
+              <img class="drag-img" src="${prod.image}" alt="${prod.name}">
+              <div class="ms-2">
+                <div><strong>${prod.name}</strong></div>
+                <div class="text-muted">$${prod.price}</div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="switch-${prod.id}" ${prod.active?'checked':''}>
+              </div>
+              <i id="pin-${prod.id}" class="bi ${pinnedHistory.includes(prod.id)?'bi-pin-fill':'bi-pin'} pin-icon"></i>
+            </div>
+          </div>`;
+        const movedIdx = getSaved(`moved-${currentCategoryId}`, []).indexOf(prod.id);
+        if (movedIdx > -1) {
+          const badge = document.createElement('span');
+          badge.className = 'moved-badge badge bg-warning rounded-pill';
+          badge.textContent = `#${movedIdx+1}`;
+          li.appendChild(badge);
+        }
+        ul.appendChild(li);
+
+        // Switch de visibilidad
+        document.getElementById(`switch-${prod.id}`).addEventListener('change', e => {
+          prod.active = e.target.checked;
+          save(`items-${currentCategoryId}`, listItems);
+          renderPreview(listItems);
+          markDirty();
+        });
+
+        // Pin / Unpin
+        document.getElementById(`pin-${prod.id}`).addEventListener('click', () => {
+          if (!pinnedHistory.includes(prod.id) && pinnedHistory.length >= 3) {
+            return alert('Solo puedes pinear 3 productos.');
+          }
+          if (pinnedHistory.includes(prod.id)) {
+            pinnedHistory = pinnedHistory.filter(id => id !== prod.id);
+          } else {
+            pinnedHistory.push(prod.id);
+          }
+          save('pinnedHistory', pinnedHistory);
+          renderProductList(listItems);
+          renderPreview(listItems);
+          markDirty();
+        });
+      });
+    }
+
+    function renderPreview(items) {
+      const prev = document.getElementById('previewPanel');
+      prev.innerHTML = '';
+
+      // 1) Panel global de pineados
+      if (pinnedHistory.length) {
+        const pinnedPanel = document.createElement('div');
+        pinnedPanel.id = 'pinnedPanel';
+        pinnedHistory.forEach(pid => {
+          const p = products.find(x => x.id === pid);
+          if (!p) return;
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.style.minWidth = '150px';
+          card.innerHTML = `
+            <img src="${p.image}" alt="${p.name}">
+            <div>${p.name}</div>`;
+          pinnedPanel.appendChild(card);
+        });
+        prev.appendChild(pinnedPanel);
+      }
+
+      // 2) Productos activos y no pineados de la categoría actual
+      items
+        .filter(p => p.active && !pinnedHistory.includes(p.id))
+        .forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <div class="d-flex align-items-center">
+              <img src="${p.image}" alt="${p.name}">
+              <div class="ms-2">
+                <div>${p.name}</div>
+                <div class="text-muted">$${p.price}</div>
+              </div>
+            </div>`;
+          prev.appendChild(card);
+        });
+    }
+
+    function sortProducts(orderType, orderDir) {
+      let sorted = [...listItems];
+      if (orderType === 'alphabetical') sorted.sort((a,b)=>a.name.localeCompare(b.name));
+      else sorted.sort((a,b)=>a.price - b.price);
+      if (orderDir === 'desc') sorted.reverse();
+      listItems    = sorted;
+      movedHistory = [];
+      save(`items-${currentCategoryId}`, listItems);
+      save(`moved-${currentCategoryId}`, movedHistory);
+      renderProductList(listItems);
+      renderPreview(listItems);
+    }
+
+    function markDirty() {
+      document.getElementById('saveBtn').classList.remove('d-none');
+      document.getElementById('resetBtn').classList.remove('d-none');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const catSelect = document.getElementById('categorySelect');
+      defaultCategories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.name;
+        catSelect.appendChild(opt);
+      });
+
+      catSelect.addEventListener('change', () => {
+        currentCategoryId = +catSelect.value;
+        const savedItems  = getSaved(`items-${currentCategoryId}`, null);
+        if (savedItems) {
+          listItems    = savedItems;
+          movedHistory = getSaved(`moved-${currentCategoryId}`, []);
+        } else {
+          sortAndSaveDefaults();
+        }
+        renderProductList(listItems);
+        renderPreview(listItems);
+      });
+
+      // Controles de orden
+      const orderType  = document.getElementById('orderTypeSelect');
+      const orderDir   = document.getElementById('orderDirectionSelect');
+      orderType .addEventListener('change', ()=>{ sortProducts(orderType.value, orderDir.value); markDirty(); });
+      orderDir  .addEventListener('change', ()=>{ sortProducts(orderType.value, orderDir.value); markDirty(); });
+
+      // Reset
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        sortAndSaveDefaults();
+        renderProductList(listItems);
+        renderPreview(listItems);
+        document.getElementById('resetBtn').classList.add('d-none');
+        document.getElementById('saveBtn').classList.remove('d-none');
+      });
+
+      // Save
+      document.getElementById('saveBtn').addEventListener('click', () => {
+        save(`items-${currentCategoryId}`, listItems);
+        save(`moved-${currentCategoryId}`, movedHistory);
+        alert('Configuration saved successfully for category ' + currentCategoryId);
+        document.getElementById('saveBtn').classList.add('d-none');
+        document.getElementById('resetBtn').classList.add('d-none');
+      });
+
+      // Drag & Drop de la lista
+      new Sortable(document.getElementById('productList'), {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        handle: '.drag-handle',
+        onEnd(evt) {
+          listItems = Array.from(document.querySelectorAll('#productList li'))
+            .map(li => listItems.find(p => p.id == li.dataset.id));
+          const movedId = +evt.item.dataset.id;
+          if (!movedHistory.includes(movedId)) movedHistory.push(movedId);
+          save(`items-${currentCategoryId}`, listItems);
+          save(`moved-${currentCategoryId}`, movedHistory);
+          renderProductList(listItems);
+          renderPreview(listItems);
+          markDirty();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
