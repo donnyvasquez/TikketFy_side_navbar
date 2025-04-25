@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Terminal Profile Layout – Developer Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    pre { background:#f8f9fa; padding:1rem; border-radius:.25rem; }
+    code { background:#e9ecef; padding:.2rem .4rem; border-radius:.2rem; }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <h1 class="mb-4">Terminal Profile Layout &mdash; Technical Guide</h1>
+
+    <!-- Section 1 -->
+    <section class="mb-5">
+      <h2>1. Estado inicial y datos</h2>
+      <p>Al cargar la pantalla por primera vez (o sin perfil seleccionado) no se muestra nada. Cuando el usuario elige un <strong>Terminal Profile</strong>, hay que:</p>
+      <ul>
+        <li>Cargar la configuración guardada desde <code>localStorage</code> o API. Si no existe, usar valores por defecto:</li>
+      </ul>
+      <pre><code>state = {
+  viewMode: 'all',          // 'all' | 'group'
+  showCatsOnly: false,      // sólo si viewMode==='group'
+  categories: [...],        // lista de IDs de categorías en orden
+  products: {               // mapa de categoría → lista de IDs de productos
+    1: [101,102,103],
+    2: [201,202,203],
+    …
+  },
+  productsAll: [...],       // lista plana de todos los IDs, orden alfabético ascendente
+  activeCats: [...],        // IDs de categorías activas
+  pinned: [...],            // hasta 6 IDs de productos destacados
+  movedHistory: [...],      // IDs (o 'all') en el orden en que se arrastraron
+  movedProds: { /* snapshots de orden */ }
+}</code></pre>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="mb-5">
+      <h2>2. Vista “View All Products”</h2>
+      <ol>
+        <li>Modo por defecto: <code>viewMode === 'all'</code>.</li>
+        <li>Mostrar listado plano de <code>state.productsAll</code> dentro de un <code>&lt;div class="list-group"&gt;</code>.</li>
+        <li>Hacer cada <code>&lt;div class="list-group-item"&gt;</code> draggable (p. ej. con SortableJS).</li>
+        <li>Al reordenar (evento <code>onEnd</code>):
+          <ul>
+            <li>Actualizar <code>state.productsAll</code> con el nuevo orden.</li>
+            <li>Guardar en <code>state.movedProds.all</code> y añadir 'all' a <code>state.movedHistory</code>.</li>
+            <li>Llamar a <code>renderPreview()</code> para reflejar el cambio en el panel de vista previa.</li>
+            <li>Marcar el estado como “dirty” mostrando botones <em>Reset All</em> y <em>Save changes</em>.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="mb-5">
+      <h2>3. Agrupar por categorías (“Group by categories”)</h2>
+      <ol>
+        <li>Cambiar <code>state.viewMode = 'group'</code>. Ocultar el listado plano y mostrar un <code>&lt;div class="accordion"&gt;</code>.</li>
+        <li>Para cada categoría en <code>state.categories</code>:
+          <ul>
+            <li>Crear un <code>&lt;div class="accordion-item"&gt;</code> con su header y botón collapse.</li>
+            <li>Incluir un <code>switch</code> para activar/desactivar esa categoría (<code>state.activeCats</code>).</li>
+            <li>Dentro del body, listar los productos de <code>state.products[cid]</code> como <code>list-group-item</code> y hacerlos reorderables.</li>
+          </ul>
+        </li>
+        <li>Al desactivar una categoría (switch):
+          <ul>
+            <li>Eliminar su ID de <code>state.activeCats</code> o añadirlo si se activa.</li>
+            <li>Marcar “dirty” y actualizar inmediatamente el preview con <code>renderPreview()</code>.</li>
+          </ul>
+        </li>
+        <li>Al reordenar categorías:
+          <ul>
+            <li>Actualizar <code>state.categories</code>.</li>
+            <li>Añadir su <code>cid</code> a <code>state.movedHistory</code> y refrescar badges.</li>
+            <li><code>renderAccordion()</code> y <code>renderPreview()</code>.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Section 4 -->
+    <section class="mb-5">
+      <h2>4. Pines (Featured Products)</h2>
+      <ol>
+        <li>En cada tarjeta de producto (modo plano o agrupado), mostrar un icono <code>&lt;i class="bi bi-pin"&gt;</code> o <code>bi-pin-fill</code> si está pineado.</li>
+        <li>Al clicar el pin-icon:
+          <ul>
+            <li>Si el producto estaba en <code>state.pinned</code>, quitarlo; si no y hay menos de 6, añadirlo.</li>
+            <li>Cambiar sólo la clase del icono (<code>classList.toggle('pinned')</code>).</li>
+            <li>Llamar <code>renderFeatured()</code> y <code>renderPreview()</code> sin re-renderizar el acordeón.</li>
+            <li>Marcar “dirty”.</li>
+          </ul>
+        </li>
+        <li>Los productos pineados se muestran en la sección “Featured Products” arriba del configurador y también en la vista previa.</li>
+      </ol>
+    </section>
+
+    <!-- Section 5 -->
+    <section class="mb-5">
+      <h2>5. Reset de configuraciones</h2>
+      <ul class="list-group">
+        <li class="list-group-item">
+          <strong>Reset Categories</strong>: restaura <code>state.categories</code> a su orden original, limpia <code>movedHistory</code>, refresca acordeón y preview.
+        </li>
+        <li class="list-group-item">
+          <strong>Reset All</strong>: recarga toda la <code>state</code> original (todas las secciones y viewMode), refresca configurador, acordeón y preview.
+        </li>
+        <li class="list-group-item">
+          <strong>Reset Products</strong> (por categoría): dentro del accordion, junto al switch, resetea sólo <code>state.products[cid]</code> a orden original y refresca esa lista y preview.
+        </li>
+      </ul>
+    </section>
+
+    <!-- Section 6 -->
+    <section class="mb-5">
+      <h2>6. Guardar y cargar configuración</h2>
+      <ol>
+        <li>Al clicar <em>Save changes</em>:
+          <pre><code>state.viewMode = viewAll ? 'all' : 'group';
+state.showCatsOnly = showCatsOnlyCheckbox.checked;
+localStorage.setItem(key, JSON.stringify(state)); // o POST a API</code></pre>
+        </li>
+        <li>Al cambiar de <em>Terminal Profile</em>:
+          <ul>
+            <li>Leer <code>JSON</code> de <code>localStorage</code> o GET desde API.</li>
+            <li>Si existe, asignar <code>state = payload</code>; si no, usar <em>defaults</em>.</li>
+            <li>Restaurar todos los controles UI (radios, switches, selects).</li>
+            <li>Renderizar configurador y preview.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Section 7 -->
+    <section class="mb-5">
+      <h2>7. Flujo de datos y sincronización</h2>
+      <p>En React, podrías usar:</p>
+      <ul>
+        <li>Un <code>useState(state)</code> para guardar la configuración.</li>
+        <li>Un <code>useEffect</code> para <em>loadState</em> al montar o cambiar el perfil.</li>
+        <li>Handlers que actualizan <code>state</code> y llaman a <code>renderPreview()</code> (o re-render del componente).</li>
+        <li>Un servicio API / <code>localStorage</code> en funciones <code>saveState</code> y <code>loadState</code>.</li>
+      </ul>
+      <p>Este módulo se compone de:</p>
+      <ol>
+        <li><strong>ConfigPanel</strong>: controles de vista, orden, reset, save.</li>
+        <li><strong>FeaturedList</strong>: productos pineados.</li>
+        <li><strong>ProductListAll</strong>: lista ordenable plano.</li>
+        <li><strong>CategoryAccordion</strong>: acordeón de categorías con drag & drop anidado.</li>
+        <li><strong>DevicePreview</strong>: renderiza según <code>state</code>.</li>
+      </ol>
+    </section>
+
+    <footer class="text-center text-muted">
+      &copy; 2025 – Guía para implementación en React
+    </footer>
+  </div>
+</body>
+</html>
